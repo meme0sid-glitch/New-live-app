@@ -2,8 +2,30 @@ import os
 import asyncio
 import edge_tts
 import requests
+import zipfile
 from moviepy.editor import ImageClip, AudioFileClip, CompositeVideoClip
 from PIL import Image, ImageDraw, ImageFont
+
+# --- Font Auto-Extract Function ---
+def ensure_font():
+    if not os.path.exists("NotoSansDevanagari.ttf") and os.path.exists("Noto_Sans_Devanagari.zip"):
+        print("Extracting Font from ZIP...")
+        try:
+            with zipfile.ZipFile("Noto_Sans_Devanagari.zip", 'r') as zip_ref:
+                zip_ref.extractall(".")
+            # ZIP के अंदर से .ttf फाइल ढूंढकर नाम बदलना
+            for root, dirs, files in os.walk("."):
+                for file in files:
+                    if file.endswith(".ttf"):
+                        os.rename(os.path.join(root, file), "NotoSansDevanagari.ttf")
+                        print("Font extracted and renamed successfully!")
+                        return
+        except Exception as e:
+            print(f"Font extraction failed: {e}")
+    else:
+        print("Font already extracted or ZIP not found.")
+
+ensure_font()
 
 # --- Settings ---
 YOUTUBE_STREAM_KEY = os.environ.get("YOUTUBE_STREAM_KEY")
@@ -23,7 +45,8 @@ def create_video(text, output_video):
     draw = ImageDraw.Draw(img)
     try:
         font = ImageFont.truetype(FONT_PATH, 50)
-    except:
+    except Exception as e:
+        print(f"Font error: {e}")
         font = ImageFont.load_default()
     
     draw.text((50, 800), text[:200] + "...", font=font, fill=(255, 255, 255))
