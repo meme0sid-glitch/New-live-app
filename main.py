@@ -3,8 +3,18 @@ import asyncio
 import edge_tts
 import requests
 import zipfile
+import threading
+import time
+from flask import Flask
 from moviepy.editor import ImageClip, AudioFileClip, CompositeVideoClip
 from PIL import Image, ImageDraw, ImageFont
+
+# --- Render Web Service के लिए नकली वेबसाइट ---
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "News Live Stream is running in the background..."
 
 # --- Font Auto-Extract Function ---
 def ensure_font():
@@ -13,7 +23,6 @@ def ensure_font():
         try:
             with zipfile.ZipFile("Noto_Sans_Devanagari.zip", 'r') as zip_ref:
                 zip_ref.extractall(".")
-            # ZIP के अंदर से .ttf फाइल ढूंढकर नाम बदलना
             for root, dirs, files in os.walk("."):
                 for file in files:
                     if file.endswith(".ttf"):
@@ -32,7 +41,6 @@ YOUTUBE_STREAM_KEY = os.environ.get("YOUTUBE_STREAM_KEY")
 FONT_PATH = "NotoSansDevanagari.ttf" 
 
 async def make_audio(text, output_file):
-    # लड़की की असली न्यूज़ एंकर जैसी आवाज़
     communicate = edge_tts.Communicate(text, "hi-IN-SwaraNeural", rate="+20%")
     await communicate.save(output_file)
 
@@ -63,7 +71,22 @@ def stream_to_youtube(video_path):
     cmd = f'ffmpeg -re -i {video_path} -c:v libx264 -preset veryfast -b:v 2000k -c:a aac -b:a 128k -f flv rtmp://a.rtmp.youtube.com/live2/{YOUTUBE_STREAM_KEY}'
     os.system(cmd)
 
+# --- मुख्य लूप (Background में चलेगा) ---
+def run_streaming_loop():
+    while True:
+        try:
+            # फिलहाल टेस्ट स्क्रिप्ट (बाद में n8n से जोड़ेंगे)
+            test_script = "नमस्कार, यह एक टेस्ट न्यूज़ है। आज देश में बड़ा बदलाव देखने को मिला है।"
+            create_video(test_script, "news_video.mp4")
+            stream_to_youtube("news_video.mp4")
+        except Exception as e:
+            print(f"Error in streaming loop: {e}")
+        time.sleep(60) # 1 मिनट रुककर दोबारा चलाएँ
+
 if __name__ == "__main__":
-    test_script = "नमस्कार, यह एक टेस्ट न्यूज़ है। आज देश में बड़ा बदलाव देखने को मिला है।"
-    create_video(test_script, "news_video.mp4")
-    stream_to_youtube("news_video.mp4")
+    # स्ट्रीमिंग लूप को एक अलग थ्रेड में चलाएँ
+    threading.Thread(target=run_streaming_loop, daemon=True).start()
+    
+    # Render के लिए नकली वेब सर्वर चालू करें
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port)
