@@ -5,9 +5,16 @@ import requests
 import zipfile
 import threading
 import time
+import imageio_ffmpeg
 from flask import Flask
 from moviepy.editor import ImageClip, AudioFileClip, CompositeVideoClip
 from PIL import Image, ImageDraw, ImageFont
+from moviepy.config import change_settings
+
+# --- FFmpeg Setup for Render ---
+ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+change_settings({"FFMPEG_BINARY": ffmpeg_path})
+os.environ["IMAGEIO_FFMPEG_EXE"] = ffmpeg_path
 
 # --- Render Web Service के लिए नकली वेबसाइट ---
 app = Flask(__name__)
@@ -27,12 +34,10 @@ def ensure_font():
                 for file in files:
                     if file.endswith(".ttf"):
                         os.rename(os.path.join(root, file), "NotoSansDevanagari.ttf")
-                        print("Font extracted and renamed successfully!")
+                        print("Font extracted successfully!")
                         return
         except Exception as e:
             print(f"Font extraction failed: {e}")
-    else:
-        print("Font already extracted or ZIP not found.")
 
 ensure_font()
 
@@ -67,26 +72,25 @@ def create_video(text, output_video):
     print("Video Created!")
 
 def stream_to_youtube(video_path):
+    if YOUTUBE_STREAM_KEY == "Testing" or not YOUTUBE_STREAM_KEY:
+        print("Stream Key is 'Testing' or missing. Skipping live stream for now.")
+        return
+        
     print("Starting Live Stream on YouTube...")
-    cmd = f'ffmpeg -re -i {video_path} -c:v libx264 -preset veryfast -b:v 2000k -c:a aac -b:a 128k -f flv rtmp://a.rtmp.youtube.com/live2/{YOUTUBE_STREAM_KEY}'
+    cmd = f'"{ffmpeg_path}" -re -i {video_path} -c:v libx264 -preset veryfast -b:v 2000k -c:a aac -b:a 128k -f flv rtmp://a.rtmp.youtube.com/live2/{YOUTUBE_STREAM_KEY}'
     os.system(cmd)
 
-# --- मुख्य लूप (Background में चलेगा) ---
 def run_streaming_loop():
     while True:
         try:
-            # फिलहाल टेस्ट स्क्रिप्ट (बाद में n8n से जोड़ेंगे)
             test_script = "नमस्कार, यह एक टेस्ट न्यूज़ है। आज देश में बड़ा बदलाव देखने को मिला है।"
             create_video(test_script, "news_video.mp4")
             stream_to_youtube("news_video.mp4")
         except Exception as e:
             print(f"Error in streaming loop: {e}")
-        time.sleep(60) # 1 मिनट रुककर दोबारा चलाएँ
+        time.sleep(60)
 
 if __name__ == "__main__":
-    # स्ट्रीमिंग लूप को एक अलग थ्रेड में चलाएँ
     threading.Thread(target=run_streaming_loop, daemon=True).start()
-    
-    # Render के लिए नकली वेब सर्वर चालू करें
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
