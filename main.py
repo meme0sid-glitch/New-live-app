@@ -6,6 +6,7 @@ import zipfile
 import threading
 import time
 import imageio_ffmpeg
+import subprocess
 from flask import Flask
 from moviepy.editor import ImageClip, AudioFileClip, CompositeVideoClip
 from PIL import Image, ImageDraw, ImageFont
@@ -72,13 +73,28 @@ def create_video(text, output_video):
     print("Video Created!")
 
 def stream_to_youtube(video_path):
-    if YOUTUBE_STREAM_KEY == "Testing" or not YOUTUBE_STREAM_KEY:
-        print("Stream Key is 'Testing' or missing. Skipping live stream for now.")
+    if not YOUTUBE_STREAM_KEY or YOUTUBE_STREAM_KEY == "Testing":
+        print("Stream Key is missing or 'Testing'. Skipping live stream.")
         return
         
     print("Starting Live Stream on YouTube...")
-    cmd = f'"{ffmpeg_path}" -re -i {video_path} -c:v libx264 -preset veryfast -b:v 2000k -c:a aac -b:a 128k -f flv rtmp://a.rtmp.youtube.com/live2/{YOUTUBE_STREAM_KEY}'
-    os.system(cmd)
+    # सीधे subprocess से FFmpeg चलाना (ज्यादा स्टेबल)
+    ffmpeg_cmd = [
+        ffmpeg_path,
+        "-re",
+        "-i", video_path,
+        "-c:v", "libx264",
+        "-preset", "veryfast",
+        "-b:v", "2000k",
+        "-c:a", "aac",
+        "-b:a", "128k",
+        "-f", "flv",
+        f"rtmp://a.rtmp.youtube.com/live2/{YOUTUBE_STREAM_KEY}"
+    ]
+    process = subprocess.Popen(ffmpeg_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    time.sleep(10)  # स्ट्रीम शुरू होने का इंतज़ार
+    process.terminate()
+    print("Stream command executed.")
 
 def run_streaming_loop():
     while True:
