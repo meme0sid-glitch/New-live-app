@@ -1,7 +1,6 @@
 import os
 import asyncio
 import edge_tts
-import requests
 import zipfile
 import threading
 import time
@@ -78,7 +77,7 @@ def stream_to_youtube(video_path):
         return
         
     print("Starting Live Stream on YouTube...")
-    # सीधे subprocess से FFmpeg चलाना (ज्यादा स्टेबल)
+    # यहाँ हम FFmpeg को लगातार चलने देते हैं (terminate नहीं करते)
     ffmpeg_cmd = [
         ffmpeg_path,
         "-re",
@@ -91,9 +90,8 @@ def stream_to_youtube(video_path):
         "-f", "flv",
         f"rtmp://a.rtmp.youtube.com/live2/{YOUTUBE_STREAM_KEY}"
     ]
-    process = subprocess.Popen(ffmpeg_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-    time.sleep(10)  # स्ट्रीम शुरू होने का इंतज़ार
-    process.terminate()
+    # यह FFmpeg को चलाएगा जब तक वीडियो खत्म नहीं हो जाता
+    subprocess.run(ffmpeg_cmd)
     print("Stream command executed.")
 
 def run_streaming_loop():
@@ -104,7 +102,7 @@ def run_streaming_loop():
             stream_to_youtube("news_video.mp4")
         except Exception as e:
             print(f"Error in streaming loop: {e}")
-        time.sleep(60)
+        time.sleep(10)  # 10 सेकंड रुककर फिर नया वीडियो बनाएँ
 
 if __name__ == "__main__":
     threading.Thread(target=run_streaming_loop, daemon=True).start()
