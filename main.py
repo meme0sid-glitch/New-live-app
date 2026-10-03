@@ -77,7 +77,7 @@ def stream_to_youtube(video_path):
         return
         
     print("Starting Live Stream on YouTube...")
-    # यहाँ हम FFmpeg को लगातार चलने देते हैं (terminate नहीं करते)
+    # यहाँ हम FFmpeg को वीडियो खत्म होने तक लगातार चलने देते हैं
     ffmpeg_cmd = [
         ffmpeg_path,
         "-re",
