@@ -62,7 +62,8 @@ def create_video(text, output_video):
         print(f"Font error: {e}")
         font = ImageFont.load_default()
     
-    draw.text((50, 800), text[:200] + "...", font=font, fill=(255, 255, 255))
+    # टेक्स्ट को इमेज पर लिखना (थोड़ा बड़ा)
+    draw.text((50, 800), text[:300] + "...", font=font, fill=(255, 255, 255))
     img.save("temp_bg.png")
     
     audio = AudioFileClip("temp_audio.mp3")
@@ -77,7 +78,6 @@ def stream_to_youtube(video_path):
         return
         
     print("Starting Live Stream on YouTube...")
-    # यहाँ हम FFmpeg को वीडियो खत्म होने तक लगातार चलने देते हैं
     ffmpeg_cmd = [
         ffmpeg_path,
         "-re",
@@ -90,19 +90,25 @@ def stream_to_youtube(video_path):
         "-f", "flv",
         f"rtmp://a.rtmp.youtube.com/live2/{YOUTUBE_STREAM_KEY}"
     ]
-    # यह FFmpeg को चलाएगा जब तक वीडियो खत्म नहीं हो जाता
     subprocess.run(ffmpeg_cmd)
     print("Stream command executed.")
 
 def run_streaming_loop():
     while True:
         try:
-            test_script = "नमस्कार, यह एक टेस्ट न्यूज़ है। आज देश में बड़ा बदलाव देखने को मिला है।"
+            # टेस्ट स्क्रिप्ट को लंबा कर दिया है (ताकि वीडियो कम से कम 1 मिनट का बने)
+            test_script = (
+                "नमस्कार, यह एक टेस्ट न्यूज़ है। आज देश में बड़ा बदलाव देखने को मिला है। "
+                "सरकार ने एक नई योजना की घोषणा की है जिससे लाखों लोगों को फायदा होगा। "
+                "इस योजना के तहत गरीब परिवारों को हर महीने आर्थिक सहायता मिलेगी। "
+                "वहीं, विपक्ष ने इस फैसले पर सवाल उठाए हैं और कहा है कि यह सिर्फ वोट बैंक की राजनीति है। "
+                "आगे की जानकारी के लिए हमारे चैनल से जुड़े रहें। धन्यवाद।"
+            )
             create_video(test_script, "news_video.mp4")
             stream_to_youtube("news_video.mp4")
         except Exception as e:
             print(f"Error in streaming loop: {e}")
-        time.sleep(10)  # 10 सेकंड रुककर फिर नया वीडियो बनाएँ
+        time.sleep(10)
 
 if __name__ == "__main__":
     threading.Thread(target=run_streaming_loop, daemon=True).start()
